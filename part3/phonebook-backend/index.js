@@ -88,6 +88,29 @@ app.post('/api/persons', (req, res, next) => {
         .catch(error => next(error))
 })
 
+app.put('/api/persons/:id', (req, res, next) => {
+    const body = req.body
+
+    if (!body.number) {
+        return res.status(400).json({ error: 'number missing' })
+    }
+
+    const person = {
+        name: body.name,
+        number: body.number,
+    }
+
+    Person.findByIdAndUpdate(req.params.id, person, { new: true, runValidators: true, context: 'query' })
+        .then(updatedPerson => {
+            if (updatedPerson) {
+                res.json(updatedPerson)
+            } else {
+                res.status(404).end()
+            }
+        })
+        .catch(error => next(error))
+})
+
 const errorHandler = (error, req, res, next) => {
     console.error(error.message)
 
