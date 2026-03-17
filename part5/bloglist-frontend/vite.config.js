@@ -5,7 +5,12 @@ export default defineConfig({
     plugins: [react()],
     server: {
         proxy: {
-            '/api': 'http://localhost:3003' // your backend port
+            '/api': 'http://localhost:3003'
         }
+    },
+    test: {
+        environment: 'jsdom',
+        globals: true,
+        setupFiles: './src/test/setup.js',
     }
 })
