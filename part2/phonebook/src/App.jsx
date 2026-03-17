@@ -44,29 +44,31 @@ const App = () => {
                 const updatedPerson = { ...existingPerson, number: newNumber }
                 personsService
                     .update(existingPerson.id, updatedPerson)
-                    .then(response => {
-                        setPersons(persons.map(p => p.id !== existingPerson.id ? p : response.data))
+                    .then(returnedPerson => {
+                        setPersons(persons.map(p => p.id !== existingPerson.id ? p : returnedPerson))
                         setNewName('')
                         setNewNumber('')
-                        showNotification(`Updated ${response.data.name}`)
+                        showNotification(`Updated ${returnedPerson.name}`)
                     })
-                    .catch(() => {
-                        showNotification(`Information of '${existingPerson.name}' has already been removed from server`, 'error')
-                        setPersons(persons.filter(p => p.id !== existingPerson.id))
+                    .catch(error => {
+                        showNotification(error.response.data.error, 'error')
+                        if (error.response.status === 404) {
+                            setPersons(persons.filter(p => p.id !== existingPerson.id))
+                        }
                     })
             }
         } else {
             const newPerson = { name: newName, number: newNumber }
             personsService
                 .create(newPerson)
-                .then(response => {
-                    setPersons(persons.concat(response.data))
+                .then(returnedPerson => {
+                    setPersons(persons.concat(returnedPerson))
                     setNewName('')
                     setNewNumber('')
-                    showNotification(`Added ${response.data.name}`)
+                    showNotification(`Added ${returnedPerson.name}`)
                 })
                 .catch(error => {
-                    showNotification('Failed to add person to server', 'error')
+                    showNotification(error.response.data.error, 'error')
                 })
         }
     }
