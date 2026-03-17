@@ -108,6 +108,72 @@ describe('addition of a new blog', () => {
     })
 })
 
+describe('deletion of a blog', () => {
+    test('succeeds with status 204 if id is valid', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogToDelete = blogsAtStart[0]
+
+        await api
+            .delete(`/api/blogs/${blogToDelete.id}`)
+            .expect(204)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length - 1)
+
+        const titles = blogsAtEnd.map(b => b.title)
+        assert(!titles.includes(blogToDelete.title))
+    })
+
+    test('fails with status 404 if id does not exist', async () => {
+        const validNonexistingId = await helper.nonExistingId()
+
+        await api
+            .delete(`/api/blogs/${validNonexistingId}`)
+            .expect(404)
+    })
+})
+
+describe('updating a blog', () => {
+    test('succeeds with valid data', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogToUpdate = blogsAtStart[0]
+
+        const updatedData = {
+            title: blogToUpdate.title,
+            author: blogToUpdate.author,
+            url: blogToUpdate.url,
+            likes: blogToUpdate.likes + 100
+        }
+
+        const response = await api
+            .put(`/api/blogs/${blogToUpdate.id}`)
+            .send(updatedData)
+            .expect(200)
+            .expect('Content-Type', /application\/json/)
+
+        assert.strictEqual(response.body.likes, blogToUpdate.likes + 100)
+
+        const blogsAtEnd = await helper.blogsInDb()
+        const updatedBlog = blogsAtEnd.find(b => b.id === blogToUpdate.id)
+        assert.strictEqual(updatedBlog.likes, blogToUpdate.likes + 100)
+    })
+
+    test('fails with status 404 if id does not exist', async () => {
+        const validNonexistingId = await helper.nonExistingId()
+        const updatedData = {
+            title: 'whatever',
+            author: 'whoever',
+            url: 'http://example.com',
+            likes: 5
+        }
+
+        await api
+            .put(`/api/blogs/${validNonexistingId}`)
+            .send(updatedData)
+            .expect(404)
+    })
+})
+
 after(async () => {
     await mongoose.connection.close()
 })
