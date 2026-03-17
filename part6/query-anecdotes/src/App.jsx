@@ -19,9 +19,9 @@ const App = () => {
     <div>
       <h3>Anecdote app</h3>
 
-      <Notification />
+        <Notification />
+        <AnecdoteForm />
         <AnecdoteList />
-      <AnecdoteForm />
 
       {anecdotes.map((anecdote) => (
         <div key={anecdote.id}>
