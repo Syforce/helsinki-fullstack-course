@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef} from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Blog from './components/Blog'
 import BlogForm from './components/BlogForm'
 import LoginForm from './components/LoginForm'
@@ -38,7 +38,7 @@ const App = () => {
             }
             setBlogs(blogs.map(b => b.id === id ? returned : b).sort((a, b) => b.likes - a.likes))
         } catch (exception) {
-            showNotification('Failed to update blog', 'error')
+            showNotification(`Failed to update blog: ${exception.message}`, 'error')
         }
     }
 
@@ -47,7 +47,7 @@ const App = () => {
             await blogService.remove(id)
             setBlogs(blogs.filter(b => b.id !== id))
         } catch (exception) {
-            showNotification('Failed to delete blog', 'error')
+            showNotification(`Failed to delete blog ${exception.message}`, 'error')
         }
     }
 
@@ -66,7 +66,7 @@ const App = () => {
             setUser(user)
             showNotification(`Welcome ${user.name}!`)
         } catch (exception) {
-            showNotification('Wrong username or password', 'error')
+            showNotification(`Wrong username or password ${exception.message}`, 'error')
         }
     }
 
@@ -83,7 +83,7 @@ const App = () => {
             blogFormRef.current.toggleVisibility()
             showNotification(`a new blog '${returnedBlog.title}' by ${returnedBlog.author} added`)
         } catch (exception) {
-            showNotification('Failed to add blog', 'error')
+            showNotification(`Failed to add blog ${exception.message}`, 'error')
         }
     }
 
