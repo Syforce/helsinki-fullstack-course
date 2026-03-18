@@ -1,6 +1,14 @@
 import { useQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
-import { useState } from 'react';
+
+const ME = gql`
+  query {
+    me {
+      username
+      favoriteGenre
+    }
+  }
+`;
 
 const ALL_BOOKS = gql`
   query allBooks($genre: String) {
@@ -10,29 +18,28 @@ const ALL_BOOKS = gql`
         name
       }
       published
-      genres
     }
   }
 `;
 
-const Books = () => {
-    const [genre, setGenre] = useState(null);
-    const result = useQuery(ALL_BOOKS, {
+const Recommend = () => {
+    const meResult = useQuery(ME);
+    const genre = meResult.data?.me?.favoriteGenre;
+    const booksResult = useQuery(ALL_BOOKS, {
+        skip: !genre,
         variables: { genre },
     });
 
-    if (result.loading) return <div>loading...</div>;
-    if (result.error) return <div>error: {result.error.message}</div>;
+    if (meResult.loading || booksResult.loading) return <div>loading...</div>;
+    if (meResult.error) return <div>error: {meResult.error.message}</div>;
 
-    const books = result.data.allBooks;
-
-    const allBooksResult = useQuery(ALL_BOOKS, { variables: { genre: null } });
-    const allBooks = allBooksResult.data?.allBooks || [];
-    const allGenres = [...new Set(allBooks.flatMap(b => b.genres))];
+    const favoriteGenre = meResult.data.me.favoriteGenre;
+    const books = booksResult.data?.allBooks || [];
 
     return (
         <div>
-            <h2>books</h2>
+            <h2>recommendations</h2>
+            <p>books in your favorite genre <strong>{favoriteGenre}</strong></p>
             <table>
                 <tbody>
                 <tr>
@@ -49,14 +56,8 @@ const Books = () => {
                 ))}
                 </tbody>
             </table>
-            <div>
-                {allGenres.map(g => (
-                    <button key={g} onClick={() => setGenre(g)}>{g}</button>
-                ))}
-                <button onClick={() => setGenre(null)}>all genres</button>
-            </div>
         </div>
     );
 };
 
-export default Books;
+export default Recommend;
