@@ -1,10 +1,36 @@
 import { useState } from 'react';
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient, useSubscription, gql } from '@apollo/client';
 import Authors from './components/Authors';
 import Books from './components/Books';
 import NewBook from './components/NewBook';
 import LoginForm from './components/LoginForm';
 import Recommend from "./components/Recommend";
+
+const BOOK_ADDED = gql`
+  subscription {
+    bookAdded {
+      title
+      author {
+        name
+      }
+      published
+      genres
+    }
+  }
+`;
+
+const ALL_BOOKS = gql`
+  query {
+    allBooks {
+      title
+      author {
+        name
+      }
+      published
+      genres
+    }
+  }
+`;
 
 const App = () => {
     const [page, setPage] = useState('authors');
@@ -17,6 +43,21 @@ const App = () => {
         client.resetStore();
         setPage('authors');
     };
+
+    useSubscription(BOOK_ADDED, {
+        onData: ({ data }) => {
+            const addedBook = data.data.bookAdded;
+            window.alert(`New book added: ${addedBook.title} by ${addedBook.author.name}`);
+
+            // Update cache for allBooks query (without variables)
+            client.cache.updateQuery({ query: ALL_BOOKS }, (data) => {
+                if (!data) return null;
+                return {
+                    allBooks: [...data.allBooks, addedBook]
+                };
+            });
+        }
+    });
 
     return (
         <div>

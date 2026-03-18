@@ -3,8 +3,22 @@ const { UserInputError, AuthenticationError } = require('apollo-server');
 const Author = require('./models/author');
 const Book = require('./models/book');
 const User = require('./models/user');
+const { PubSub } = require('graphql-subscriptions');
+const DataLoader = require('dataloader');
 
-const JWT_SECRET = 'NEED_HERE_A_SECRET_KEY';
+const JWT_SECRET = process.env.JWT_SECRET;
+const pubsub = new PubSub();
+
+const bookCountLoader = new DataLoader(async (authorIds) => {
+    const counts = await Book.aggregate([
+        { $match: { author: { $in: authorIds } } },
+        { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]);
+    return authorIds.map(id => {
+        const found = counts.find(c => c._id.equals(id));
+        return found ? found.count : 0;
+    });
+});
 
 const resolvers = {
     Query: {
@@ -27,15 +41,25 @@ const resolvers = {
         },
         allAuthors: async () => {
             const authors = await Author.find({});
-            return authors;
+            const bookCounts = await Book.aggregate([
+                { $group: { _id: '$author', count: { $sum: 1 } } }
+            ]);
+            const countMap = bookCounts.reduce((map, item) => {
+                map[item._id.toString()] = item.count;
+                return map;
+            }, {});
+            return authors.map(author => ({
+                ...author.toObject(),
+                bookCount: countMap[author._id.toString()] || 0
+            }));
         },
         me: (root, args, context) => {
             return context.currentUser;
         }
     },
     Author: {
-        bookCount: async (root) => {
-            return Book.countDocuments({ author: root._id });
+        bookCount: async (root, args, context) => {
+            return context.bookCountLoader.load(root._id);
         }
     },
     Mutation: {
@@ -59,6 +83,7 @@ const resolvers = {
             const book = new Book({ ...args, author: author._id });
             try {
                 await book.save();
+                await pubsub.publish('BOOK_ADDED', {bookAdded: book.populate('author')});
             } catch (error) {
                 throw new UserInputError(error.message, {
                     invalidArgs: args,
@@ -112,7 +137,12 @@ const resolvers = {
 
             return { value: jwt.sign(userForToken, JWT_SECRET) };
         }
-    }
+    },
+    Subscription: {
+        bookAdded: {
+            subscribe: () => pubsub.asyncIterator(['BOOK_ADDED'])
+        }
+    },
 };
 
 module.exports = resolvers;
